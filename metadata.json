@@ -1,0 +1,5 @@
+{
+  "name": "Frigobar Express",
+  "description": "App para lançamento de consumo de frigobar com suporte a múltiplos hotéis e compartilhamento via WhatsApp.",
+  "requestFramePermissions": []
+}
