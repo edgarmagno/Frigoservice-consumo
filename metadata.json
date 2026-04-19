@@ -1,5 +1,5 @@
 {
-  "name": "Frigobar Express",
-  "description": "App para lançamento de consumo de frigobar com suporte a múltiplos hotéis e compartilhamento via WhatsApp.",
+  "name": "FrigoService",
+  "description": "Plataforma oficial FrigoService para gestão de consumo de frigobar e lançamentos via WhatsApp.",
   "requestFramePermissions": []
 }

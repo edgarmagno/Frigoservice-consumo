@@ -94,6 +94,26 @@ const handleFirestoreError = (err: any, operationType: FirestoreErrorInfo['opera
 
 // --- Components ---
 
+function FrigoLogo({ className = "h-12" }: { className?: string }) {
+  return (
+    <div className={`${className}`}>
+      <svg viewBox="0 0 100 100" className="h-full w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Frigobar Body */}
+        <rect x="25" y="15" width="50" height="70" rx="4" fill="#1A1A3F" />
+        {/* Door Line */}
+        <line x1="70" y1="15" x2="70" y2="85" stroke="white" strokeWidth="1" className="opacity-20" />
+        {/* Handle */}
+        <rect x="68" y="40" width="4" height="15" rx="1" fill="#00AEEF" />
+        {/* Top Detail */}
+        <rect x="25" y="15" width="50" height="8" rx="2" fill="#00AEEF" className="opacity-40" />
+        {/* Feet */}
+        <rect x="30" y="85" width="6" height="3" fill="#1A1A3F" />
+        <rect x="64" y="85" width="6" height="3" fill="#1A1A3F" />
+      </svg>
+    </div>
+  );
+}
+
 function Login({ onLogin }: { onLogin: (email: string, pass: string) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -119,11 +139,13 @@ function Login({ onLogin }: { onLogin: (email: string, pass: string) => void }) 
         className="w-full max-w-md bg-white rounded-4xl p-10 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative z-10 border border-slate-100"
       >
         <div className="flex flex-col items-center mb-12">
-          <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white mb-6 shadow-2xl shadow-slate-200">
-            <HotelBuilding size={40} strokeWidth={1.5} />
+          <div className="mb-6 select-none">
+            <FrigoLogo className="h-20" />
           </div>
-          <h1 className="text-4xl font-display font-black text-slate-900 tracking-tight">FrigoService</h1>
-          <p className="text-slate-400 font-medium mt-2">Plataforma de Gestão de Consumo</p>
+          <div className="text-center">
+            <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight uppercase">Frigo Service</h1>
+            <p className="text-slate-400 font-medium mt-1 text-sm">Gestão de Consumo Inteligente</p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -169,7 +191,7 @@ function Login({ onLogin }: { onLogin: (email: string, pass: string) => void }) 
   );
 }
 
-function AdminDashboard({ userEmail }: { userEmail: string }) {
+function AdminDashboard() {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
   const [items, setItems] = useState<FrigobarItem[]>([]);
@@ -320,14 +342,13 @@ function AdminDashboard({ userEmail }: { userEmail: string }) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-5 flex justify-between items-center sticky top-0 z-30 shadow-sm">
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg">
             <HotelBuilding size={20} />
           </div>
           <div>
             <h1 className="text-xl font-display font-black tracking-tight">Console Gerencial</h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{userEmail}</p>
           </div>
         </div>
         <button 
@@ -712,7 +733,7 @@ function Launcher({ hotel }: { hotel: Hotel }) {
                <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg">
                   <HotelBuilding size={20} />
                </div>
-               <button onClick={() => signOut(auth)} className="text-[10px] uppercase font-bold opacity-50 underline">Sair</button>
+               <button onClick={() => signOut(auth)} className="text-[10px] uppercase font-bold opacity-50 underline text-white">Sair</button>
             </div>
           </div>
 
@@ -942,7 +963,7 @@ export default function App() {
   }
 
   if (user.email === 'gerencia@frigoservice.com') {
-    return <AdminDashboard userEmail={user.email} />;
+    return <AdminDashboard />;
   }
 
   if (hotel) {
