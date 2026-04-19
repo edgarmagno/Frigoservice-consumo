@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
   signOut, 
   User as FirebaseUser 
 } from 'firebase/auth';
@@ -114,16 +115,21 @@ function FrigoLogo({ className = "h-12" }: { className?: string }) {
   );
 }
 
-function Login({ onLogin }: { onLogin: (email: string, pass: string) => void }) {
+function Login({ onLogin, onRegister }: { onLogin: (email: string, pass: string) => void, onRegister: (email: string, pass: string) => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await onLogin(email, password);
+      if (isRegister) {
+        await onRegister(email, password);
+      } else {
+        await onLogin(email, password);
+      }
     } finally {
       setLoading(false);
     }
@@ -144,31 +150,35 @@ function Login({ onLogin }: { onLogin: (email: string, pass: string) => void }) 
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight uppercase">Frigo Service</h1>
-            <p className="text-slate-400 font-medium mt-1 text-sm">Gestão de Consumo Inteligente</p>
+            <p className="text-slate-400 font-medium mt-1 text-sm">
+              {isRegister ? 'Crie sua conta para começar' : 'Gestão de Consumo Inteligente'}
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Identificação</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Usuário (E-mail)</label>
             <div className="relative group">
               <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors" size={18} />
               <input
                 type="email"
+                id="usuario"
                 value={email}
                 onChange={(e) => setEmail(e.target.value.toLowerCase())}
                 required
                 className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900"
-                placeholder="seu-hotel@frigoservice.com"
+                placeholder="exemplo@frigoservice.com"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Código de Acesso</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Senha</label>
             <div className="relative group">
               <input
                 type="password"
+                id="senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -183,8 +193,18 @@ function Login({ onLogin }: { onLogin: (email: string, pass: string) => void }) 
             disabled={loading}
             className="w-full bg-slate-900 text-white py-5 rounded-3xl font-display font-black text-lg shadow-xl shadow-slate-200 hover:shadow-2xl hover:bg-black active:scale-[0.99] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" /> : 'Acessar Console'}
+            {loading ? <Loader2 className="animate-spin" /> : (isRegister ? 'Cadastrar Agora' : 'Acessar Console')}
           </button>
+
+          <div className="text-center">
+            <button 
+              type="button"
+              onClick={() => setIsRegister(!isRegister)}
+              className="text-xs font-bold text-slate-400 hover:text-slate-900 transition-colors"
+            >
+              {isRegister ? 'Já tem uma conta? Entrar' : 'Não tem conta? Cadastrar'}
+            </button>
+          </div>
         </form>
       </motion.div>
     </div>
@@ -940,14 +960,44 @@ export default function App() {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-    } catch {
-      setError('Acesso negado. Verifique e-mail e senha.');
+    } catch (e: unknown) {
+      const error = e as { code?: string };
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setError('Acesso negado. Verifique e-mail e senha.');
+      } else {
+        setError('Ocorreu um erro ao tentar acessar. Verifique sua conexão.');
+      }
+    }
+  };
+
+  const handleRegister = async (email: string, pass: string) => {
+    setError(null);
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      // Optional: Logic to create a hotel document if they aren't admin
+      if (email !== 'gerencia@frigoservice.com') {
+        const hotelName = email.split('@')[0].toUpperCase();
+        await addDoc(collection(db, 'hotels'), {
+          name: hotelName,
+          loginEmail: email,
+          color: '#0f172a'
+        });
+      }
+    } catch (e: unknown) {
+      const error = e as { code?: string };
+      if (error.code === 'auth/email-already-in-use') {
+        setError('Este e-mail já está cadastrado.');
+      } else if (error.code === 'auth/weak-password') {
+        setError('A senha deve ter pelo menos 6 caracteres.');
+      } else {
+        setError('Erro ao realizar o cadastro. Tente novamente.');
+      }
     }
   };
 
   if (loading) return <div className="flex items-center justify-center h-screen bg-slate-50"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
 
-  if (!user) return <Login onLogin={handleLogin} />;
+  if (!user) return <Login onLogin={handleLogin} onRegister={handleRegister} />;
 
   if (error) {
     return (
