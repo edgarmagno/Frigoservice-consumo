@@ -629,7 +629,7 @@ function AdminDashboard({ userEmail }: { userEmail: string }) {
   );
 }
 
-function Launcher({ hotel, userEmail }: { hotel: Hotel; userEmail: string }) {
+function Launcher({ hotel }: { hotel: Hotel }) {
   const [items, setItems] = useState<FrigobarItem[]>([]);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [roomNumber, setRoomNumber] = useState('');
@@ -674,7 +674,7 @@ function Launcher({ hotel, userEmail }: { hotel: Hotel; userEmail: string }) {
       .filter(item => (quantities[item.id] || 0) > 0)
       .map(item => {
         const qty = quantities[item.id];
-        return `• ${item.name}: ${qty}x R$ ${item.price.toFixed(2)} = R$ ${(qty * item.price).toFixed(2)}`;
+        return `* ${item.name}: ${qty}x R$ ${item.price.toFixed(2)} = R$ ${(qty * item.price).toFixed(2)}`;
       });
 
     if (consumedItems.length === 0) {
@@ -682,13 +682,10 @@ function Launcher({ hotel, userEmail }: { hotel: Hotel; userEmail: string }) {
       return;
     }
 
-    const message = `*Lançamento de Frigobar*\n\n` +
-      `*Hotel:* ${hotel.name}\n` +
-      `*Apto:* ${roomNumber}\n` +
-      `*Colaborador:* ${userEmail}\n\n` +
-      `*Itens Consumidos:*\n` +
+    const message = `UH: ${roomNumber}\n` +
+      `Consumo:\n` +
       consumedItems.join('\n') + `\n\n` +
-      `*Total: R$ ${total.toFixed(2)}*`;
+      `Total: R$ ${total.toFixed(2)}`;
 
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
@@ -949,7 +946,7 @@ export default function App() {
   }
 
   if (hotel) {
-    return <Launcher hotel={hotel} userEmail={user.email!} />;
+    return <Launcher hotel={hotel} />;
   }
 
   return <div className="flex items-center justify-center h-screen bg-slate-50">Configurando ambiente...</div>;
