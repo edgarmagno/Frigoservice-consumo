@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "Hotel": {
+      "title": "Hotel",
+      "description": "Configuração de um hotel específico",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome do hotel" },
+        "color": { "type": "string", "description": "Cor principal do hotel (hex)" },
+        "loginEmail": { "type": "string", "description": "E-mail de login do hotel" }
+      },
+      "required": ["name", "color", "loginEmail"]
+    },
+    "Item": {
+      "title": "Item Frigobar",
+      "description": "Item disponível no frigobar e seu preço",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome do item" },
+        "price": { "type": "number", "description": "Preço do item" }
+      },
+      "required": ["name", "price"]
+    }
+  },
+  "firestore": {
+    "/hotels/{hotelId}": {
+      "schema": "Hotel",
+      "description": "Dados do hotel"
+    },
+    "/hotels/{hotelId}/items/{itemId}": {
+      "schema": "Item",
+      "description": "Itens do frigobar do hotel"
+    }
+  }
+}

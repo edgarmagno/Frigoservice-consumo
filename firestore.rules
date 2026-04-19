@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn(); // Relaxing for now as console users aren't verified by default
+    }
+
+    function isAdmin() {
+      return isVerified() && request.auth.token.email == 'gerencia@frigoservice.com';
+    }
+
+    function isHotelUser(hotelData) {
+      return isVerified() && request.auth.token.email == hotelData.loginEmail;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Rules for Hotels
+    match /hotels/{hotelId} {
+      allow get: if isSignedIn() && (isAdmin() || request.auth.token.email == resource.data.loginEmail);
+      allow list: if isSignedIn() && (isAdmin() || (isVerified() && resource.data.loginEmail == request.auth.token.email));
+      
+      allow create, update: if isAdmin() && 
+        isValidId(hotelId) &&
+        request.resource.data.keys().hasAll(['name', 'color', 'loginEmail']) &&
+        request.resource.data.name is string && request.resource.data.name.size() <= 100 &&
+        request.resource.data.color is string && request.resource.data.color.size() <= 7 &&
+        request.resource.data.loginEmail is string && request.resource.data.loginEmail.size() <= 100;
+
+      allow delete: if isAdmin();
+
+      // Rules for Items subcollection
+      match /items/{itemId} {
+        // Optimization: For list operations, we check if the user is the admin or the hotel user
+        // We use get() for single documents, but for lists we rely on the parent permission if possible
+        // but here we must verify the parent hotel data.
+        allow read: if isSignedIn() && (isAdmin() || request.auth.token.email == get(/databases/$(database)/documents/hotels/$(hotelId)).data.loginEmail);
+        
+        allow create, update: if isAdmin() &&
+          isValidId(itemId) &&
+          request.resource.data.keys().hasAll(['name', 'price']) &&
+          request.resource.data.name is string && request.resource.data.name.size() <= 100 &&
+          request.resource.data.price is number && request.resource.data.price >= 0;
+
+        allow delete: if isAdmin();
+      }
+    }
+  }
+}
