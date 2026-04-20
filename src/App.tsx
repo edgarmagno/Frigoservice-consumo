@@ -104,20 +104,13 @@ const normalizeToEmail = (id: string) => {
 
 function FrigoLogo({ className = "h-12" }: { className?: string }) {
   return (
-    <div className={`${className}`}>
-      <svg viewBox="0 0 100 100" className="h-full w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Frigobar Body */}
-        <rect x="25" y="15" width="50" height="70" rx="4" fill="#1A1A3F" />
-        {/* Door Line */}
-        <line x1="70" y1="15" x2="70" y2="85" stroke="white" strokeWidth="1" className="opacity-20" />
-        {/* Handle */}
-        <rect x="68" y="40" width="4" height="15" rx="1" fill="#00AEEF" />
-        {/* Top Detail */}
-        <rect x="25" y="15" width="50" height="8" rx="2" fill="#00AEEF" className="opacity-40" />
-        {/* Feet */}
-        <rect x="30" y="85" width="6" height="3" fill="#1A1A3F" />
-        <rect x="64" y="85" width="6" height="3" fill="#1A1A3F" />
-      </svg>
+    <div className={`${className} flex items-center justify-center select-none`}>
+      <img 
+        src="https://frigoservice.com.br/wp-content/uploads/2023/08/frigoservice-logo-cor.png" 
+        alt="Frigo Service" 
+        className="h-full w-auto object-contain"
+        referrerPolicy="no-referrer"
+      />
     </div>
   );
 }
@@ -146,16 +139,13 @@ function Login({ onLogin }: { onLogin: (id: string, pass: string) => void }) {
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-md bg-white rounded-[2.5rem] p-8 sm:p-10 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative z-10 border border-slate-100"
       >
-        <div className="flex flex-col items-center mb-10 md:mb-12">
-          <div className="mb-4 md:mb-6 select-none">
-            <FrigoLogo className="h-16 md:h-20" />
+        <div className="flex flex-col items-center mb-8 md:mb-10">
+          <div className="mb-2 select-none flex justify-center">
+            <FrigoLogo className="h-24 md:h-32" />
           </div>
-          <div className="text-center">
-            <h1 className="text-xl md:text-2xl font-display font-black text-slate-900 tracking-tight uppercase">Frigo Service</h1>
-            <p className="text-slate-400 font-medium mt-1 text-xs md:text-sm">
-              Gestão de Consumo Inteligente
-            </p>
-          </div>
+          <p className="text-slate-400 font-medium text-xs md:text-sm">
+            Gestão de Consumo Inteligente
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
@@ -381,7 +371,7 @@ function AdminDashboard() {
 
       <main className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden relative">
         {/* Sidebar: Hotels List */}
-        <div className={`w-full md:w-85 bg-white border-r border-slate-100 flex flex-col h-full bg-slate-50 md:bg-white ${selectedHotelId ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full md:w-96 bg-white border-r border-slate-100 flex flex-col h-full bg-slate-50 md:bg-white ${selectedHotelId ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-6 flex justify-between items-center border-b border-slate-50">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Unidades</h2>
             <button 
@@ -449,7 +439,7 @@ function AdminDashboard() {
                 key={selectedHotelId}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-8 md:p-12 max-w-5xl mx-auto w-full"
+                className="p-6 md:p-12 w-full max-w-7xl mx-auto"
               >
                 {/* Modern Header */}
                 <div className="bg-white rounded-4xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] border border-white mb-8 flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -739,7 +729,7 @@ function Launcher({ hotel }: { hotel: Hotel }) {
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 overflow-x-hidden">
       {/* Header */}
       <header className="px-6 pt-10 pb-8 text-white relative rounded-b-[2.5rem] shadow-xl" style={{ backgroundColor: hotel.color }}>
-        <div className="max-w-md mx-auto">
+        <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-start mb-8">
             <div className="flex-1">
               <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">HOTEL SELECIONADO</p>
@@ -766,7 +756,7 @@ function Launcher({ hotel }: { hotel: Hotel }) {
       </header>
 
       {/* Items List */}
-      <main className="px-5 pt-6 pb-48 space-y-2.5 max-w-md mx-auto">
+      <main className="px-5 pt-6 pb-48 space-y-2.5 max-w-4xl mx-auto">
         <AnimatePresence>
           {items.map((item, index) => (
             <motion.div 
@@ -822,7 +812,7 @@ function Launcher({ hotel }: { hotel: Hotel }) {
             exit={{ y: 150, opacity: 0 }}
             className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl px-6 py-5 pb-8 border-t border-slate-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[2.5rem] z-50 transition-all"
           >
-            <div className="max-w-md mx-auto">
+            <div className="max-w-4xl mx-auto">
               <div className="flex justify-between items-end mb-4">
                 <div>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5">TOTAL CONSUMO</p>
@@ -868,41 +858,40 @@ function Launcher({ hotel }: { hotel: Hotel }) {
               />
               <motion.div 
                 initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                className="relative bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl"
+                className="relative bg-white w-full max-w-4xl rounded-t-[2.5rem] sm:rounded-4xl p-10 md:p-12 shadow-2xl"
               >
-                 <div className="mb-6 flex justify-between items-start">
-                    <div>
-                       <h2 className="text-xl font-black uppercase tracking-tight">Resumo do Consumo</h2>
-                       <p className="text-slate-400 text-sm font-medium">Lançamento para o Apto: <span className="text-slate-900 font-black">{roomNumber || '---'}</span></p>
-                    </div>
-                    <button onClick={() => setShowSummary(false)} className="p-2 bg-slate-50 rounded-full text-slate-400 hover:bg-slate-100"><X size={20} /></button>
+                 <div className="mb-6 flex justify-end items-start text-xs font-black uppercase tracking-widest text-slate-400">
+                    <button onClick={() => setShowSummary(false)} className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"><X size={20} /></button>
                  </div>
-                 <div className="space-y-4 mb-8 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+
+                 <div className="space-y-1 mb-6 max-h-[50vh] overflow-y-auto pr-4 custom-scrollbar">
                     {items.filter(i => (quantities[i.id] || 0) > 0).map(item => (
-                       <div key={item.id} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
-                          <div className="flex flex-col">
-                             <span className="font-bold text-slate-700">{item.name}</span>
-                             <span className="text-xs text-slate-400">{quantities[item.id]} x R$ {item.price.toFixed(2)}</span>
+                       <div key={item.id} className="flex justify-between items-baseline py-2.5 border-b border-slate-50 last:border-0">
+                          <div className="flex flex-col gap-0.5">
+                             <span className="font-bold text-slate-800 uppercase text-[13px] tracking-tight">{item.name}</span>
+                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{quantities[item.id]} UN × R$ {item.price.toFixed(2)}</span>
                           </div>
-                          <span className="font-black text-slate-900">R$ {(quantities[item.id] * item.price).toFixed(2)}</span>
+                          <span className="font-black text-slate-900 text-base tabular-nums tracking-tighter">R$ {(quantities[item.id] * item.price).toFixed(2)}</span>
                        </div>
                     ))}
                     {items.filter(i => (quantities[i.id] || 0) > 0).length === 0 && (
                        <div className="text-center py-12 flex flex-col items-center gap-4 text-slate-300">
                           <PackagePlus size={48} strokeWidth={1} />
-                          <p className="italic">Selecione itens para visualizar o resumo</p>
+                          <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-50">Frigobar Vazio</p>
                        </div>
                     )}
                  </div>
-                 <div className="flex justify-between items-center mb-8 p-6 bg-slate-50 rounded-3xl">
-                    <span className="font-bold text-slate-500 uppercase tracking-widest text-xs">Total final</span>
-                    <span className="text-2xl font-black text-slate-900">R$ {total.toFixed(2)}</span>
+
+                 <div className="flex justify-between items-center py-5 border-t-2 border-slate-900/5 mb-8">
+                    <span className="font-black text-slate-400 uppercase tracking-[0.2em] text-[10px]">Total Acumulado</span>
+                    <span className="text-2xl font-black text-slate-900 tabular-nums tracking-tighter leading-none">R$ {total.toFixed(2)}</span>
                  </div>
+
                  <button 
                    onClick={() => setShowSummary(false)}
-                   className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-slate-200"
+                   className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl shadow-slate-200 hover:bg-black transition-all"
                  >
-                   Voltar aos Itens
+                   Continuar Lançando
                  </button>
               </motion.div>
            </div>
