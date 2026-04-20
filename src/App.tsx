@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Edit,
   Copy,
+  ArrowLeft,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -93,6 +94,13 @@ const handleFirestoreError = (err: any, operationType: FirestoreErrorInfo['opera
   console.error('Firestore Error:', errorInfo);
 };
 
+// --- Helpers ---
+
+const normalizeToEmail = (id: string) => {
+  if (id.includes('@')) return id.toLowerCase();
+  return `${id.toLowerCase()}@frigo.local`;
+};
+
 // --- Components ---
 
 function FrigoLogo({ className = "h-12" }: { className?: string }) {
@@ -115,8 +123,8 @@ function FrigoLogo({ className = "h-12" }: { className?: string }) {
   );
 }
 
-function Login({ onLogin, onRegister }: { onLogin: (email: string, pass: string) => void, onRegister: (email: string, pass: string) => void }) {
-  const [email, setEmail] = useState('');
+function Login({ onLogin, onRegister }: { onLogin: (id: string, pass: string) => void, onRegister: (id: string, pass: string) => void }) {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
@@ -126,9 +134,9 @@ function Login({ onLogin, onRegister }: { onLogin: (email: string, pass: string)
     setLoading(true);
     try {
       if (isRegister) {
-        await onRegister(email, password);
+        await onRegister(username, password);
       } else {
-        await onLogin(email, password);
+        await onLogin(username, password);
       }
     } finally {
       setLoading(false);
@@ -151,24 +159,24 @@ function Login({ onLogin, onRegister }: { onLogin: (email: string, pass: string)
           <div className="text-center">
             <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight uppercase">Frigo Service</h1>
             <p className="text-slate-400 font-medium mt-1 text-sm">
-              {isRegister ? 'Crie sua conta para começar' : 'Gestão de Consumo Inteligente'}
+              {isRegister ? 'Crie seu seu ID exclusivo' : 'Gestão de Consumo Inteligente'}
             </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Usuário (E-mail)</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">ID do Usuário</label>
             <div className="relative group">
               <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors" size={18} />
               <input
-                type="email"
+                type="text"
                 id="usuario"
-                value={email}
-                onChange={(e) => setEmail(e.target.value.toLowerCase())}
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 required
                 className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900"
-                placeholder="exemplo@frigoservice.com"
+                placeholder="ex: hotel01"
               />
             </div>
           </div>
@@ -369,6 +377,7 @@ function AdminDashboard() {
           </div>
           <div>
             <h1 className="text-xl font-display font-black tracking-tight">Console Gerencial</h1>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{auth.currentUser?.email?.split('@')[0]}</p>
           </div>
         </div>
         <button 
@@ -379,9 +388,9 @@ function AdminDashboard() {
         </button>
       </header>
 
-      <main className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden">
+      <main className="flex-1 flex flex-col md:flex-row h-[calc(100vh-80px)] overflow-hidden relative">
         {/* Sidebar: Hotels List */}
-        <div className="w-full md:w-85 bg-white border-r border-slate-100 flex flex-col h-full">
+        <div className={`w-full md:w-85 bg-white border-r border-slate-100 flex flex-col h-full bg-slate-50 md:bg-white ${selectedHotelId ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-6 flex justify-between items-center border-b border-slate-50">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Unidades</h2>
             <button 
@@ -393,10 +402,10 @@ function AdminDashboard() {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {hotels.map(hotel => (
-              <button
+              <div
                 key={hotel.id}
                 onClick={() => setSelectedHotelId(hotel.id)}
-                className={`w-full group p-4 rounded-2xl text-left transition-all flex items-center gap-4 ${
+                className={`w-full group p-4 rounded-2xl text-left transition-all flex items-center gap-4 cursor-pointer ${
                   selectedHotelId === hotel.id 
                     ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 translate-x-1' 
                     : 'hover:bg-slate-50'
@@ -412,7 +421,7 @@ function AdminDashboard() {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm truncate uppercase tracking-tight">{hotel.name}</p>
                   <p className={`text-[10px] font-medium truncate opacity-60 ${selectedHotelId === hotel.id ? 'text-white' : 'text-slate-400'}`}>
-                    {hotel.loginEmail}
+                    ID: {hotel.loginEmail.split('@')[0]}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -423,13 +432,13 @@ function AdminDashboard() {
                     <Edit size={14} />
                   </button>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </div>
 
         {/* Content Area: Items Management */}
-        <div className="flex-1 overflow-y-auto bg-slate-50 flex flex-col">
+        <div className={`flex-1 overflow-y-auto bg-slate-50 flex flex-col ${!selectedHotelId ? 'hidden md:flex' : 'flex'}`}>
           <AnimatePresence mode="wait">
             {!selectedHotelId ? (
               <motion.div 
@@ -454,6 +463,12 @@ function AdminDashboard() {
                 {/* Modern Header */}
                 <div className="bg-white rounded-4xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] border border-white mb-8 flex flex-col md:flex-row md:items-center justify-between gap-8">
                   <div className="flex items-center gap-6">
+                    <button 
+                      onClick={() => setSelectedHotelId(null)}
+                      className="md:hidden w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors"
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
                     <div className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg transform -rotate-3" style={{ backgroundColor: selectedHotel?.color }}>
                       <HotelBuilding size={36} className="text-white" />
                     </div>
@@ -461,7 +476,7 @@ function AdminDashboard() {
                       <h2 className="text-3xl font-display font-black text-slate-900 tracking-tight mb-2 uppercase">{selectedHotel?.name}</h2>
                       <div className="flex flex-wrap gap-4 items-center">
                         <span className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-full">
-                          <User size={12} /> {selectedHotel?.loginEmail}
+                          <User size={12} /> ID: {selectedHotel?.loginEmail.split('@')[0]}
                         </span>
                         <div className="w-4 h-4 rounded-full border-2 border-slate-100" style={{ backgroundColor: selectedHotel?.color }} />
                       </div>
@@ -555,11 +570,12 @@ function AdminDashboard() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Email de Acesso</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">ID de Acesso</label>
                   <input 
-                    type="email" required value={hotelForm.loginEmail}
-                    onChange={e => setHotelForm({...hotelForm, loginEmail: e.target.value})}
-                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold"
+                    type="text" required value={hotelForm.loginEmail.split('@')[0]}
+                    onChange={e => setHotelForm({...hotelForm, loginEmail: normalizeToEmail(e.target.value)})}
+                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold placeholder:opacity-30"
+                    placeholder="ex: hotel01"
                   />
                 </div>
                 <div className="space-y-2">
@@ -655,7 +671,7 @@ function AdminDashboard() {
                   >
                     <div>
                       <span className="font-display font-black uppercase text-xs tracking-widest block mb-1">{hotel.name}</span>
-                      <span className="text-[10px] font-bold opacity-40 uppercase">{hotel.loginEmail}</span>
+                      <span className="text-[10px] font-bold opacity-40 uppercase">ID: {hotel.loginEmail.split('@')[0]}</span>
                     </div>
                     <ChevronRight size={18} />
                   </button>
@@ -925,68 +941,91 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, async (u) => {
+    let hotelUnsub: (() => void) | null = null;
+    
+    const authUnsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      setError(null);
+      
+      if (hotelUnsub) {
+        hotelUnsub();
+        hotelUnsub = null;
+      }
+
       if (u) {
         if (u.email === 'gerencia@frigoservice.com') {
           setHotel(null);
           setLoading(false);
         } else {
-          // Fetch hotel by email
-          try {
-            const q = query(collection(db, 'hotels'), where('loginEmail', '==', u.email));
-            const snap = await getDocs(q);
+          setLoading(true);
+          const q = query(collection(db, 'hotels'), where('loginEmail', '==', u.email));
+          hotelUnsub = onSnapshot(q, (snap) => {
             if (!snap.empty) {
               setHotel({ id: snap.docs[0].id, ...snap.docs[0].data() } as Hotel);
+              setError(null);
             } else {
-              setError('Hotel não cadastrado no banco de dados.');
               setHotel(null);
+              // Only set error if we've waited a bit, to allow for registration race
+              setTimeout(() => {
+                if (auth.currentUser && !snap.empty === false) {
+                   // Double check after 2 seconds
+                   setError('Sua conta está sendo configurada ou o ID não foi encontrado.');
+                }
+              }, 3000);
             }
-          } catch (e) {
-            console.error(e);
-            setError('Erro ao carregar dados do hotel.');
-          } finally {
             setLoading(false);
-          }
+          }, (err) => {
+            console.error(err);
+            setError('Erro ao carregar dados do hotel.');
+            setLoading(false);
+          });
         }
       } else {
         setHotel(null);
         setLoading(false);
       }
     });
+
+    return () => {
+      authUnsub();
+      if (hotelUnsub) hotelUnsub();
+    };
   }, []);
 
-  const handleLogin = async (email: string, pass: string) => {
+  const handleLogin = async (id: string, pass: string) => {
     setError(null);
+    const email = normalizeToEmail(id);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (e: unknown) {
       const error = e as { code?: string };
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        setError('Acesso negado. Verifique e-mail e senha.');
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        setError('Acesso negado. Verifique o ID e a Senha.');
       } else {
         setError('Ocorreu um erro ao tentar acessar. Verifique sua conexão.');
       }
     }
   };
 
-  const handleRegister = async (email: string, pass: string) => {
+  const handleRegister = async (id: string, pass: string) => {
     setError(null);
+    const email = normalizeToEmail(id);
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
-      // Optional: Logic to create a hotel document if they aren't admin
-      if (email !== 'gerencia@frigoservice.com') {
-        const hotelName = email.split('@')[0].toUpperCase();
+      // Logic to create a hotel document
+      const normalizedEmail = email.toLowerCase();
+      if (normalizedEmail !== 'gerencia@frigoservice.com') {
+        const hotelName = id.toUpperCase();
         await addDoc(collection(db, 'hotels'), {
           name: hotelName,
-          loginEmail: email,
+          loginEmail: normalizedEmail,
           color: '#0f172a'
         });
       }
     } catch (e: unknown) {
       const error = e as { code?: string };
       if (error.code === 'auth/email-already-in-use') {
-        setError('Este e-mail já está cadastrado.');
+        setError('Este ID já está sendo utilizado.');
       } else if (error.code === 'auth/weak-password') {
         setError('A senha deve ter pelo menos 6 caracteres.');
       } else {

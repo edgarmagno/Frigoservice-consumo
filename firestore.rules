@@ -32,8 +32,9 @@ service cloud.firestore {
       allow get: if isSignedIn() && (isAdmin() || request.auth.token.email == resource.data.loginEmail);
       allow list: if isSignedIn() && (isAdmin() || (isVerified() && resource.data.loginEmail == request.auth.token.email));
       
-      allow create, update: if isAdmin() && 
-        isValidId(hotelId) &&
+      allow create: if isSignedIn() && (isAdmin() || request.auth.token.email == request.resource.data.loginEmail);
+      
+      allow update: if isAdmin() && 
         request.resource.data.keys().hasAll(['name', 'color', 'loginEmail']) &&
         request.resource.data.name is string && request.resource.data.name.size() <= 100 &&
         request.resource.data.color is string && request.resource.data.color.size() <= 7 &&
