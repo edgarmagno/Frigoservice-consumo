@@ -132,19 +132,19 @@ function Login({ onLogin }: { onLogin: (id: string, pass: string) => void }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6 font-sans">
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,_#e2e8f0_0%,_transparent_50%)] pointer-events-none" />
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,_#f1f5f9_0%,_transparent_75%)] pointer-events-none" />
       
       <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-white rounded-[2.5rem] p-8 sm:p-10 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative z-10 border border-slate-100"
+        initial={{ opacity: 0, scale: 0.98, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="w-full max-w-md bg-white rounded-[3rem] p-8 sm:p-12 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.06)] relative z-10 border border-slate-100/50"
       >
-        <div className="flex flex-col items-center mb-8 md:mb-10">
-          <div className="mb-2 select-none flex justify-center">
-            <FrigoLogo className="h-24 md:h-32" />
+        <div className="flex flex-col items-center mb-10 md:mb-12">
+          <div className="mb-4 select-none flex justify-center">
+            <FrigoLogo className="h-32 md:h-40" />
           </div>
-          <p className="text-slate-400 font-medium text-xs md:text-sm">
-            Gestão de Consumo Inteligente
+          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.25em] text-center">
+            Consumo Inteligente
           </p>
         </div>
 
@@ -381,17 +381,24 @@ function AdminDashboard() {
               <Plus size={16} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="flex-1 overflow-y-auto p-4 space-y-1">
             {hotels.map(hotel => (
               <div
                 key={hotel.id}
                 onClick={() => setSelectedHotelId(hotel.id)}
-                className={`w-full group p-4 rounded-2xl text-left transition-all flex items-center gap-4 cursor-pointer ${
+                className={`w-full group p-4 rounded-2xl text-left transition-all flex items-center gap-4 cursor-pointer relative overflow-hidden ${
                   selectedHotelId === hotel.id 
-                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 translate-x-1' 
-                    : 'hover:bg-slate-50'
+                    ? 'bg-slate-900 text-white shadow-2xl shadow-slate-200 translate-x-1' 
+                    : 'hover:bg-slate-100/80 active:scale-[0.98]'
                 }`}
               >
+                {selectedHotelId === hotel.id && (
+                  <motion.div 
+                    layoutId="active-bg"
+                    className="absolute inset-0 bg-slate-900 -z-10"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
                 <div 
                   className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
                     selectedHotelId === hotel.id ? 'bg-white/10' : 'bg-slate-100'
@@ -477,12 +484,15 @@ function AdminDashboard() {
                     <motion.div 
                       layout
                       key={item.id} 
-                      className="bg-white group p-6 rounded-3xl border border-transparent hover:border-slate-100 shadow-sm hover:shadow-xl transition-all flex items-center justify-between"
+                      className="bg-white group p-6 rounded-[2rem] border border-transparent hover:border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.03)] transition-all flex items-center justify-between"
                     >
                       <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-slate-900 transition-colors">
+                          <PackagePlus size={20} />
+                        </div>
                         <div>
-                          <p className="font-display font-black text-slate-900 text-lg uppercase tracking-tight">{item.name}</p>
-                          <p className="text-slate-400 text-sm font-bold">R$ {item.price.toFixed(2)}</p>
+                          <p className="font-display font-black text-slate-900 text-lg uppercase tracking-tight leading-none mb-1">{item.name}</p>
+                          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Preço Unitário: R$ {item.price.toFixed(2)}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -728,28 +738,34 @@ function Launcher({ hotel }: { hotel: Hotel }) {
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 overflow-x-hidden">
       {/* Header */}
-      <header className="px-6 pt-10 pb-8 text-white relative rounded-b-[2.5rem] shadow-xl" style={{ backgroundColor: hotel.color }}>
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-start mb-8">
+      <header className="px-6 pt-12 pb-10 text-white relative rounded-b-[3rem] shadow-2xl overflow-hidden" style={{ backgroundColor: hotel.color }}>
+        <div className="absolute inset-0 bg-black/5 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full -mr-20 -mt-20 pointer-events-none" />
+        
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="flex justify-between items-start mb-10">
             <div className="flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">HOTEL SELECIONADO</p>
-              <h1 className="text-xl md:text-2xl font-black leading-tight tracking-tight uppercase drop-shadow-sm">{hotel.name}</h1>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60 mb-2">HOTEL SELECIONADO</p>
+              <h1 className="text-2xl md:text-3xl font-black leading-tight tracking-tighter uppercase drop-shadow-md">{hotel.name}</h1>
             </div>
-            <div className="flex flex-col items-end gap-2">
-               <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg">
-                  <HotelBuilding size={20} />
+            <div className="flex flex-col items-end gap-3 text-right">
+               <div className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-lg border border-white/10 group hover:bg-white/30 transition-all">
+                  <HotelBuilding size={22} className="drop-shadow-sm" />
                </div>
-               <button onClick={() => signOut(auth)} className="text-[10px] uppercase font-bold opacity-50 underline text-white">Sair</button>
+               <button onClick={() => signOut(auth)} className="text-[10px] uppercase font-black tracking-widest opacity-40 hover:opacity-100 text-white transition-opacity">Deslogar</button>
             </div>
           </div>
-
-          <div className="relative max-w-[200px]">
+          
+          <div className="relative group max-w-[220px]">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-black transition-colors z-20 pointer-events-none">
+              <User size={16} strokeWidth={2.5} />
+            </div>
             <input
               type="text"
-              placeholder="Nº do Apto"
+              placeholder="Número Apart."
               value={roomNumber}
               onChange={(e) => setRoomNumber(e.target.value)}
-              className="w-full bg-white text-slate-900 px-5 py-2.5 rounded-xl font-bold text-base shadow-sm placeholder:text-slate-300 focus:outline-none ring-offset-2 focus:ring-4 focus:ring-black/10 transition-all uppercase tracking-tight"
+              className="w-full bg-white text-slate-900 pl-12 pr-5 py-3.5 rounded-2xl font-black text-sm shadow-2xl placeholder:text-slate-300 focus:outline-none ring-offset-4 ring-offset-transparent focus:ring-4 focus:ring-white/20 transition-all uppercase tracking-tighter"
             />
           </div>
         </div>
@@ -764,23 +780,29 @@ function Launcher({ hotel }: { hotel: Hotel }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.01 }}
-              className={`bg-white p-4 sm:p-5 rounded-3xl shadow-sm border transition-all duration-300 ${
-                (quantities[item.id] || 0) > 0 ? 'border-slate-300 bg-white' : 'border-slate-100'
-              } flex items-center justify-between`}
+              className={`bg-white p-5 sm:p-6 rounded-[2rem] shadow-[0_4px_15px_rgba(0,0,0,0.02)] border transition-all duration-500 ${
+                (quantities[item.id] || 0) > 0 ? 'border-slate-300 ring-4 ring-slate-100/50' : 'border-slate-100 hover:border-slate-200'
+              } flex items-center justify-between group`}
             >
               <div className="flex-1 pr-4">
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base mb-0.5 leading-tight">{item.name}</h3>
-                <p className="text-slate-400 text-xs sm:text-sm font-medium italic">R$ {item.price.toFixed(2)}</p>
+                <h3 className="font-bold text-slate-800 text-sm sm:text-base mb-1 leading-tight uppercase tracking-tight group-hover:text-black transition-colors">{item.name}</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400 text-xs sm:text-sm font-bold">R$ {item.price.toFixed(2)}</span>
+                  {(quantities[item.id] || 0) > 0 && <span className="w-1 h-1 bg-slate-300 rounded-full" />}
+                  {(quantities[item.id] || 0) > 0 && (
+                    <span className="text-[10px] font-black text-slate-900 uppercase">Total: R$ {(quantities[item.id] * item.price).toFixed(2)}</span>
+                  )}
+                </div>
               </div>
               
               <div className="flex items-center gap-3 sm:gap-4 shrink-0">
                 <button 
                   onClick={() => updateQuantity(item.id, -1)}
-                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${
-                    (quantities[item.id] || 0) > 0 ? 'bg-slate-100 text-slate-600' : 'bg-slate-50 text-slate-200 pointer-events-none'
+                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+                    (quantities[item.id] || 0) > 0 ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-slate-50 text-slate-200 pointer-events-none'
                   }`}
                 >
-                  <Minus size={16} />
+                  <Minus size={20} strokeWidth={3} />
                 </button>
                 
                 <span className="w-5 text-center font-bold text-base sm:text-lg tabular-nums">
@@ -789,10 +811,10 @@ function Launcher({ hotel }: { hotel: Hotel }) {
                 
                 <button 
                   onClick={() => updateQuantity(item.id, 1)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white shadow-md active:scale-90 transition-transform"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-white shadow-xl active:scale-95 active:brightness-90 transition-all"
                   style={{ backgroundColor: hotel.color }}
                 >
-                  <Plus size={16} />
+                  <Plus size={20} strokeWidth={3} />
                 </button>
               </div>
             </motion.div>
