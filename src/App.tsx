@@ -96,8 +96,9 @@ const handleFirestoreError = (err: any, operationType: FirestoreErrorInfo['opera
 // --- Helpers ---
 
 const normalizeToEmail = (id: string) => {
-  if (id.includes('@')) return id.toLowerCase();
-  return `${id.toLowerCase()}@frigo.local`;
+  const cleanId = id.trim().toLowerCase();
+  if (cleanId.includes('@')) return cleanId;
+  return `${cleanId}@frigoservice.com`;
 };
 
 // --- Components ---
@@ -174,9 +175,15 @@ function Login({ onLogin, onRegister }: { onLogin: (id: string, pass: string) =>
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 required
-                className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900"
+                autoComplete="username"
+                className="w-full pl-14 pr-24 md:pr-32 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900"
                 placeholder="ex: hotel01"
               />
+              {!username.includes('@') && username.length > 0 && (
+                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">
+                  @frigoservice.com
+                </span>
+              )}
             </div>
           </div>
 
@@ -189,6 +196,7 @@ function Login({ onLogin, onRegister }: { onLogin: (id: string, pass: string) =>
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
                 className="w-full px-6 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900"
                 placeholder="••••••••"
               />
