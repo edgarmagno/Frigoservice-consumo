@@ -23,7 +23,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
   signOut, 
   User as FirebaseUser 
 } from 'firebase/auth';
@@ -123,21 +122,16 @@ function FrigoLogo({ className = "h-12" }: { className?: string }) {
   );
 }
 
-function Login({ onLogin, onRegister }: { onLogin: (id: string, pass: string) => void, onRegister: (id: string, pass: string) => void }) {
+function Login({ onLogin }: { onLogin: (id: string, pass: string) => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isRegister, setIsRegister] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (isRegister) {
-        await onRegister(username, password);
-      } else {
-        await onLogin(username, password);
-      }
+      await onLogin(username, password);
     } finally {
       setLoading(false);
     }
@@ -150,21 +144,21 @@ function Login({ onLogin, onRegister }: { onLogin: (id: string, pass: string) =>
       <motion.div 
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-white rounded-4xl p-10 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative z-10 border border-slate-100"
+        className="w-full max-w-md bg-white rounded-[2.5rem] p-8 sm:p-10 md:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative z-10 border border-slate-100"
       >
-        <div className="flex flex-col items-center mb-12">
-          <div className="mb-6 select-none">
-            <FrigoLogo className="h-20" />
+        <div className="flex flex-col items-center mb-10 md:mb-12">
+          <div className="mb-4 md:mb-6 select-none">
+            <FrigoLogo className="h-16 md:h-20" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-display font-black text-slate-900 tracking-tight uppercase">Frigo Service</h1>
-            <p className="text-slate-400 font-medium mt-1 text-sm">
-              {isRegister ? 'Crie seu seu ID exclusivo' : 'Gestão de Consumo Inteligente'}
+            <h1 className="text-xl md:text-2xl font-display font-black text-slate-900 tracking-tight uppercase">Frigo Service</h1>
+            <p className="text-slate-400 font-medium mt-1 text-xs md:text-sm">
+              Gestão de Consumo Inteligente
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">ID do Usuário</label>
             <div className="relative group">
@@ -176,11 +170,11 @@ function Login({ onLogin, onRegister }: { onLogin: (id: string, pass: string) =>
                 onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 required
                 autoComplete="username"
-                className="w-full pl-14 pr-24 md:pr-32 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900"
+                className="w-full pl-14 pr-6 sm:pr-24 md:pr-32 py-4 md:py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900 text-sm md:text-base"
                 placeholder="ex: hotel01"
               />
               {!username.includes('@') && username.length > 0 && (
-                <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">
+                <span className="hidden sm:block absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] md:text-xs pointer-events-none">
                   @frigoservice.com
                 </span>
               )}
@@ -197,7 +191,7 @@ function Login({ onLogin, onRegister }: { onLogin: (id: string, pass: string) =>
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full px-6 py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900"
+                className="w-full px-6 py-4 md:py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900 text-sm md:text-base"
                 placeholder="••••••••"
               />
             </div>
@@ -206,20 +200,10 @@ function Login({ onLogin, onRegister }: { onLogin: (id: string, pass: string) =>
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slate-900 text-white py-5 rounded-3xl font-display font-black text-lg shadow-xl shadow-slate-200 hover:shadow-2xl hover:bg-black active:scale-[0.99] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            className="w-full bg-slate-900 text-white py-4 md:py-5 rounded-3xl font-display font-black text-base md:text-lg shadow-xl shadow-slate-200 hover:shadow-2xl hover:bg-black active:scale-[0.99] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" /> : (isRegister ? 'Cadastrar Agora' : 'Acessar Console')}
+            {loading ? <Loader2 className="animate-spin" /> : 'ACESSAR CONSOLE'}
           </button>
-
-          <div className="text-center">
-            <button 
-              type="button"
-              onClick={() => setIsRegister(!isRegister)}
-              className="text-xs font-bold text-slate-400 hover:text-slate-900 transition-colors"
-            >
-              {isRegister ? 'Já tem uma conta? Entrar' : 'Não tem conta? Cadastrar'}
-            </button>
-          </div>
         </form>
       </motion.div>
     </div>
@@ -1003,36 +987,9 @@ export default function App() {
     }
   };
 
-  const handleRegister = async (id: string, pass: string) => {
-    setError(null);
-    const email = normalizeToEmail(id);
-    try {
-      await createUserWithEmailAndPassword(auth, email, pass);
-      // Logic to create a hotel document
-      const normalizedEmail = email.toLowerCase();
-      if (normalizedEmail !== 'gerencia@frigoservice.com') {
-        const hotelName = id.toUpperCase();
-        await addDoc(collection(db, 'hotels'), {
-          name: hotelName,
-          loginEmail: normalizedEmail,
-          color: '#0f172a'
-        });
-      }
-    } catch (e: unknown) {
-      const error = e as { code?: string };
-      if (error.code === 'auth/email-already-in-use') {
-        setError('Este ID já está sendo utilizado.');
-      } else if (error.code === 'auth/weak-password') {
-        setError('A senha deve ter pelo menos 6 caracteres.');
-      } else {
-        setError('Erro ao realizar o cadastro. Tente novamente.');
-      }
-    }
-  };
-
   if (loading) return <div className="flex items-center justify-center h-screen bg-slate-50"><Loader2 className="animate-spin text-blue-600" size={48} /></div>;
 
-  if (!user) return <Login onLogin={handleLogin} onRegister={handleRegister} />;
+  if (!user) return <Login onLogin={handleLogin} />;
 
   if (error) {
     return (
