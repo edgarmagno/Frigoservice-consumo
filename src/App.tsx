@@ -17,7 +17,6 @@ import {
   User,
   ChevronRight,
   Edit,
-  Copy,
   ArrowLeft,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -424,7 +423,7 @@ function AdminDashboard() {
                     ID: {hotel.loginEmail.split('@')[0]}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 transition-opacity">
                   <button 
                     onClick={(e) => { e.stopPropagation(); openEditHotel(hotel); }}
                     className={`p-2 rounded-lg transition-colors ${selectedHotelId === hotel.id ? 'hover:bg-white/20' : 'hover:bg-slate-200'}`}
@@ -469,9 +468,6 @@ function AdminDashboard() {
                     >
                       <ArrowLeft size={20} />
                     </button>
-                    <div className="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg transform -rotate-3" style={{ backgroundColor: selectedHotel?.color }}>
-                      <HotelBuilding size={36} className="text-white" />
-                    </div>
                     <div>
                       <h2 className="text-3xl font-display font-black text-slate-900 tracking-tight mb-2 uppercase">{selectedHotel?.name}</h2>
                       <div className="flex flex-wrap gap-4 items-center">
@@ -484,12 +480,6 @@ function AdminDashboard() {
                   </div>
                   
                   <div className="flex gap-3">
-                    <button 
-                      onClick={() => setIsCloneModalOpen(true)}
-                      className="px-5 py-4 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-100 transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest"
-                    >
-                      <Copy size={16} /> Clonar Itens
-                    </button>
                     <button 
                       onClick={openAddItem}
                       className="px-8 py-4 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-200"
@@ -508,20 +498,18 @@ function AdminDashboard() {
                       className="bg-white group p-6 rounded-3xl border border-transparent hover:border-slate-100 shadow-sm hover:shadow-xl transition-all flex items-center justify-between"
                     >
                       <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all">
-                          <PackagePlus size={20} />
-                        </div>
                         <div>
                           <p className="font-display font-black text-slate-900 text-lg uppercase tracking-tight">{item.name}</p>
-                          <button 
-                            onClick={() => openEditItem(item)}
-                            className="text-slate-400 hover:text-slate-900 text-sm font-bold flex items-center gap-1 transition-colors"
-                          >
-                            R$ {item.price.toFixed(2)} <Edit size={10} />
-                          </button>
+                          <p className="text-slate-400 text-sm font-bold">R$ {item.price.toFixed(2)}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        <button 
+                          onClick={() => openEditItem(item)}
+                          className="p-4 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all"
+                        >
+                          <Edit size={20} />
+                        </button>
                         <button 
                           onClick={() => deleteItem(item.id)}
                           className="p-4 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
