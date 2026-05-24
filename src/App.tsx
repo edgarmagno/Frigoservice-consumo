@@ -816,7 +816,7 @@ function Launcher({ hotel }: { hotel: Hotel }) {
       .filter(item => (quantities[item.id] || 0) > 0)
       .map(item => {
         const qty = quantities[item.id];
-        return `* ${item.name}: ${qty}x R$ ${item.price.toFixed(2)} = R$ ${(qty * item.price).toFixed(2)}`;
+        return `${item.name} x ${qty}`;
       });
 
     if (consumedItems.length === 0) {
@@ -827,7 +827,7 @@ function Launcher({ hotel }: { hotel: Hotel }) {
     const message = `UH: ${roomNumber}\n` +
       `Consumo:\n` +
       consumedItems.join('\n') + `\n\n` +
-      `Total: R$ ${total.toFixed(2)}`;
+      `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
 
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
