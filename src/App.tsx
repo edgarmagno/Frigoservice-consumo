@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo, useEffect, FormEvent } from 'react';
+import { useState, useMemo, useEffect, FormEvent, useCallback, memo } from 'react';
 import { 
   Plus, 
   Minus, 
@@ -135,8 +135,9 @@ function Login({ onLogin }: { onLogin: (id: string, pass: string) => void }) {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,_#f1f5f9_0%,_transparent_75%)] pointer-events-none" />
       
       <motion.div 
-        initial={{ opacity: 0, scale: 0.98, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
         className="w-full max-w-md bg-white rounded-[3rem] p-8 sm:p-12 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.06)] relative z-10 border border-slate-100/50"
       >
         <div className="flex flex-col items-center mb-10 md:mb-12">
@@ -160,7 +161,7 @@ function Login({ onLogin }: { onLogin: (id: string, pass: string) => void }) {
                 onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 required
                 autoComplete="username"
-                className="w-full pl-14 pr-6 sm:pr-24 md:pr-32 py-4 md:py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900 text-sm md:text-base"
+                className="w-full pl-14 pr-6 sm:pr-24 md:pr-32 py-4 md:py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900 text-base"
                 placeholder="ex: hotel01"
               />
               {!username.includes('@') && username.length > 0 && (
@@ -181,7 +182,7 @@ function Login({ onLogin }: { onLogin: (id: string, pass: string) => void }) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full px-6 py-4 md:py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900 text-sm md:text-base"
+                className="w-full px-6 py-4 md:py-5 bg-slate-50 border-2 border-transparent focus:border-slate-900 focus:bg-white rounded-3xl outline-none transition-all font-semibold text-slate-900 text-base"
                 placeholder="••••••••"
               />
             </div>
@@ -214,7 +215,7 @@ function AdminDashboard() {
   const [editingItem, setEditingItem] = useState<FrigobarItem | null>(null);
 
   // Form states
-  const [hotelForm, setHotelForm] = useState({ name: '', loginEmail: '', color: '#004a99' });
+  const [hotelForm, setHotelForm] = useState({ name: '', loginEmail: '', color: '#004a99', cloneSourceId: '' });
   const [itemForm, setItemForm] = useState({ name: '', price: '' });
 
   useEffect(() => {
@@ -222,7 +223,7 @@ function AdminDashboard() {
       collection(db, 'hotels'), 
       (snap) => {
         const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Hotel));
-        setHotels(data);
+        setHotels(data.sort((a, b) => a.name.localeCompare(b.name)));
         setLoading(false);
       },
       (err) => handleFirestoreError(err, 'list', 'hotels')
@@ -248,30 +249,45 @@ function AdminDashboard() {
 
   const openAddHotel = () => {
     setEditingHotel(null);
-    setHotelForm({ name: '', loginEmail: '', color: '#004a99' });
+    setHotelForm({ name: '', loginEmail: '', color: '#004a99', cloneSourceId: '' });
     setIsHotelModalOpen(true);
   };
 
   const openEditHotel = (hotel: Hotel) => {
     setEditingHotel(hotel);
-    setHotelForm({ name: hotel.name, loginEmail: hotel.loginEmail, color: hotel.color });
+    setHotelForm({ name: hotel.name, loginEmail: hotel.loginEmail, color: hotel.color, cloneSourceId: '' });
     setIsHotelModalOpen(true);
   };
 
   const handleHotelSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
+      const { cloneSourceId, ...hotelData } = hotelForm;
+      let targetHotelId = '';
+
       if (editingHotel) {
-        await updateDoc(doc(db, 'hotels', editingHotel.id), {
-          ...hotelForm,
-          loginEmail: hotelForm.loginEmail.toLowerCase()
+        targetHotelId = editingHotel.id;
+        await updateDoc(doc(db, 'hotels', targetHotelId), {
+          ...hotelData,
+          loginEmail: hotelData.loginEmail.toLowerCase()
         });
       } else {
-        await addDoc(collection(db, 'hotels'), {
-          ...hotelForm,
-          loginEmail: hotelForm.loginEmail.toLowerCase()
+        const docRef = await addDoc(collection(db, 'hotels'), {
+          ...hotelData,
+          loginEmail: hotelData.loginEmail.toLowerCase()
         });
+        targetHotelId = docRef.id;
       }
+
+      // If a clone source is selected, copy all of its items
+      if (cloneSourceId) {
+        const sourceItemsSnap = await getDocs(collection(db, 'hotels', cloneSourceId, 'items'));
+        const promises = sourceItemsSnap.docs.map(itemDoc => 
+          addDoc(collection(db, 'hotels', targetHotelId, 'items'), itemDoc.data())
+        );
+        await Promise.all(promises);
+      }
+
       setIsHotelModalOpen(false);
     } catch (err) {
       handleFirestoreError(err, editingHotel ? 'update' : 'create', 'hotels');
@@ -351,7 +367,7 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-3 flex justify-between items-center sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg">
             <HotelBuilding size={20} />
@@ -392,13 +408,6 @@ function AdminDashboard() {
                     : 'hover:bg-slate-100/80 active:scale-[0.98]'
                 }`}
               >
-                {selectedHotelId === hotel.id && (
-                  <motion.div 
-                    layoutId="active-bg"
-                    className="absolute inset-0 bg-slate-900 -z-10"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
                 <div 
                   className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
                     selectedHotelId === hotel.id ? 'bg-white/10' : 'bg-slate-100'
@@ -433,6 +442,7 @@ function AdminDashboard() {
                 key="empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
+                transition={{ duration: 0.15 }}
                 className="flex-1 flex flex-col items-center justify-center p-12 text-center"
               >
                 <div className="w-32 h-32 bg-white rounded-4xl flex items-center justify-center text-slate-200 shadow-sm mb-6">
@@ -444,12 +454,13 @@ function AdminDashboard() {
             ) : (
               <motion.div 
                 key={selectedHotelId}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.15 }}
                 className="p-6 md:p-12 w-full max-w-7xl mx-auto"
               >
                 {/* Modern Header */}
-                <div className="bg-white rounded-4xl p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] border border-white mb-8 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                <div className="bg-white rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.01)] border border-slate-100/50 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                   <div className="flex items-center gap-6">
                     <button 
                       onClick={() => setSelectedHotelId(null)}
@@ -469,6 +480,14 @@ function AdminDashboard() {
                   </div>
                   
                   <div className="flex gap-3">
+                    {hotels.length > 1 && (
+                      <button 
+                        onClick={() => setIsCloneModalOpen(true)}
+                        className="px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest border border-slate-200"
+                      >
+                        Clonar Itens
+                      </button>
+                    )}
                     <button 
                       onClick={openAddItem}
                       className="px-8 py-4 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-200"
@@ -482,7 +501,6 @@ function AdminDashboard() {
                 <div className="grid grid-cols-1 gap-4">
                   {items.map(item => (
                     <motion.div 
-                      layout
                       key={item.id} 
                       className="bg-white group p-6 rounded-[2rem] border border-transparent hover:border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.03)] transition-all flex items-center justify-between"
                     >
@@ -529,9 +547,10 @@ function AdminDashboard() {
         {isHotelModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="bg-white w-full max-w-md rounded-4xl p-10 shadow-2xl space-y-8"
             >
               <div>
@@ -546,7 +565,7 @@ function AdminDashboard() {
                   <input 
                     autoFocus required value={hotelForm.name}
                     onChange={e => setHotelForm({...hotelForm, name: e.target.value})}
-                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold uppercase"
+                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold uppercase text-base"
                   />
                 </div>
                 <div className="space-y-2">
@@ -554,7 +573,7 @@ function AdminDashboard() {
                   <input 
                     type="text" required value={hotelForm.loginEmail.split('@')[0]}
                     onChange={e => setHotelForm({...hotelForm, loginEmail: normalizeToEmail(e.target.value)})}
-                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold placeholder:opacity-30"
+                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold placeholder:opacity-30 text-base"
                     placeholder="ex: hotel01"
                   />
                 </div>
@@ -564,7 +583,7 @@ function AdminDashboard() {
                     <input 
                       type="text" required value={hotelForm.color}
                       onChange={e => setHotelForm({...hotelForm, color: e.target.value})}
-                      className="flex-1 p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold"
+                      className="flex-1 p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold text-base"
                     />
                     <input 
                       type="color" value={hotelForm.color}
@@ -573,6 +592,34 @@ function AdminDashboard() {
                     />
                   </div>
                 </div>
+
+                {hotels.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">
+                      {editingHotel ? "Clonar Itens para esta Unidade (Opcional)" : "Clonar Itens de Outro Hotel (Opcional)"}
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={hotelForm.cloneSourceId}
+                        onChange={e => setHotelForm({...hotelForm, cloneSourceId: e.target.value})}
+                        className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold text-base text-slate-800 appearance-none cursor-pointer pr-10"
+                      >
+                        <option value="">Não clonar (Iniciar vazio/Manter atuais)</option>
+                        {hotels
+                          .filter(h => !editingHotel || h.id !== editingHotel.id)
+                          .map(h => (
+                            <option key={h.id} value={h.id}>
+                              {h.name} ({h.loginEmail.split('@')[0]})
+                            </option>
+                          ))
+                        }
+                      </select>
+                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <ChevronRight size={18} className="rotate-90" />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-col gap-3 pt-4">
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setIsHotelModalOpen(false)} className="flex-1 py-5 rounded-3xl font-bold bg-slate-50 hover:bg-slate-100 transition-all uppercase tracking-widest text-xs">Cancelar</button>
@@ -596,9 +643,10 @@ function AdminDashboard() {
         {isItemModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="bg-white w-full max-w-md rounded-4xl p-10 shadow-2xl space-y-8"
             >
               <h2 className="text-2xl font-display font-black text-slate-900 tracking-tight uppercase">
@@ -610,7 +658,7 @@ function AdminDashboard() {
                   <input 
                     autoFocus required value={itemForm.name}
                     onChange={e => setItemForm({...itemForm, name: e.target.value})}
-                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold uppercase"
+                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold uppercase text-base"
                   />
                 </div>
                 <div className="space-y-2">
@@ -618,7 +666,7 @@ function AdminDashboard() {
                   <input 
                     type="number" step="0.01" required value={itemForm.price}
                     onChange={e => setItemForm({...itemForm, price: e.target.value})}
-                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold"
+                    className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold text-base"
                   />
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -633,9 +681,10 @@ function AdminDashboard() {
         {isCloneModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="bg-white w-full max-w-md rounded-4xl p-10 shadow-2xl max-h-[80vh] flex flex-col"
             >
               <div className="mb-6">
@@ -666,6 +715,62 @@ function AdminDashboard() {
   );
 }
 
+interface LauncherItemProps {
+  item: FrigobarItem;
+  quantity: number;
+  onUpdateQuantity: (itemId: string, delta: number) => void;
+  hotelColor: string;
+}
+
+const LauncherItem = memo(({ item, quantity, onUpdateQuantity, hotelColor }: LauncherItemProps) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.1 }}
+      className={`bg-white p-4 sm:p-6 rounded-[7.5px] shadow-[0_4px_15px_rgba(0,0,0,0.02)] border transition-all duration-150 ${
+        quantity > 0 ? 'border-slate-300 ring-2 ring-slate-100/50' : 'border-slate-100 hover:border-slate-200'
+      } flex items-center justify-between group`}
+    >
+      <div className="flex-1 pr-4">
+        <h3 className="font-bold text-slate-800 text-sm sm:text-base mb-1 leading-tight uppercase tracking-tight group-hover:text-black transition-colors">{item.name}</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400 text-xs sm:text-sm font-bold">R$ {item.price.toFixed(2)}</span>
+          {quantity > 0 && <span className="w-1 h-1 bg-slate-300 rounded-full" />}
+          {quantity > 0 && (
+            <span className="text-[10px] font-black text-slate-900 uppercase">Total: R$ {(quantity * item.price).toFixed(2)}</span>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <button 
+          onClick={() => onUpdateQuantity(item.id, -1)}
+          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+            quantity > 0 ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-slate-50 text-slate-200 pointer-events-none'
+          }`}
+        >
+          <Minus size={20} strokeWidth={3} />
+        </button>
+        
+        <span className="w-5 text-center font-bold text-base sm:text-lg tabular-nums">
+          {quantity}
+        </span>
+        
+        <button 
+          onClick={() => onUpdateQuantity(item.id, 1)}
+          className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-white shadow-xl active:scale-95 active:brightness-90 transition-all"
+          style={{ backgroundColor: hotelColor }}
+        >
+          <Plus size={20} strokeWidth={3} />
+        </button>
+      </div>
+    </motion.div>
+  );
+});
+
+LauncherItem.displayName = 'LauncherItem';
+
 function Launcher({ hotel }: { hotel: Hotel }) {
   const [items, setItems] = useState<FrigobarItem[]>([]);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -694,12 +799,12 @@ function Launcher({ hotel }: { hotel: Hotel }) {
     }, 0);
   }, [items, quantities]);
 
-  const updateQuantity = (itemId: string, delta: number) => {
+  const updateQuantity = useCallback((itemId: string, delta: number) => {
     setQuantities(prev => ({
       ...prev,
       [itemId]: Math.max(0, (prev[itemId] || 0) + delta)
     }));
-  };
+  }, []);
 
   const shareToWhatsApp = () => {
     if (!roomNumber) {
@@ -738,34 +843,35 @@ function Launcher({ hotel }: { hotel: Hotel }) {
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 overflow-x-hidden">
       {/* Header */}
-      <header className="px-6 pt-12 pb-10 text-white relative rounded-b-[3rem] shadow-2xl overflow-hidden" style={{ backgroundColor: hotel.color }}>
+      <header className="px-5 pt-6 pb-6 text-white relative rounded-b-[2.5rem] shadow-xl overflow-hidden" style={{ backgroundColor: hotel.color }}>
         <div className="absolute inset-0 bg-black/5 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-3xl rounded-full -mr-20 -mt-20 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 blur-2xl rounded-full -mr-16 -mt-16 pointer-events-none" />
         
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="flex justify-between items-start mb-10">
-            <div className="flex-1">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-60 mb-2">HOTEL SELECIONADO</p>
-              <h1 className="text-2xl md:text-3xl font-black leading-tight tracking-tighter uppercase drop-shadow-md">{hotel.name}</h1>
+        <div className="max-w-4xl mx-auto relative z-10 flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <div className="flex-1 min-w-0 pr-4">
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] opacity-60 mb-0.5">Hotel Selecionado</p>
+              <h1 className="text-xl md:text-2xl font-black leading-tight tracking-tight uppercase truncate drop-shadow-sm">{hotel.name}</h1>
             </div>
-            <div className="flex flex-col items-end gap-3 text-right">
-               <div className="w-12 h-12 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-lg border border-white/10 group hover:bg-white/30 transition-all">
-                  <HotelBuilding size={22} className="drop-shadow-sm" />
-               </div>
-               <button onClick={() => signOut(auth)} className="text-[10px] uppercase font-black tracking-widest opacity-40 hover:opacity-100 text-white transition-opacity">Deslogar</button>
-            </div>
+            
+            <button 
+              onClick={() => signOut(auth)} 
+              className="text-[10px] uppercase font-black tracking-widest px-3 py-1.5 bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white rounded-xl flex items-center gap-1 shrink-0 border border-white/5"
+            >
+              Sair
+            </button>
           </div>
           
-          <div className="relative group max-w-[220px]">
-            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-black transition-colors z-20 pointer-events-none">
-              <User size={16} strokeWidth={2.5} />
+          <div className="relative group w-full">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-black transition-colors z-20 pointer-events-none">
+              <User size={15} strokeWidth={2.5} />
             </div>
             <input
               type="text"
-              placeholder="Número Apart."
+              placeholder="Digite o Número do Apartamento"
               value={roomNumber}
               onChange={(e) => setRoomNumber(e.target.value)}
-              className="w-full bg-white text-slate-900 pl-12 pr-5 py-3.5 rounded-2xl font-black text-sm shadow-2xl placeholder:text-slate-300 focus:outline-none ring-offset-4 ring-offset-transparent focus:ring-4 focus:ring-white/20 transition-all uppercase tracking-tighter"
+              className="w-full bg-white text-slate-900 pl-11 pr-5 py-3 rounded-xl font-black text-sm shadow-xl placeholder:text-slate-300 focus:outline-none transition-all uppercase tracking-tighter"
             />
           </div>
         </div>
@@ -774,50 +880,14 @@ function Launcher({ hotel }: { hotel: Hotel }) {
       {/* Items List */}
       <main className="px-5 pt-6 pb-48 space-y-2.5 max-w-4xl mx-auto">
         <AnimatePresence>
-          {items.map((item, index) => (
-            <motion.div 
+          {items.map((item) => (
+            <LauncherItem
               key={item.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.01 }}
-              className={`bg-white p-5 sm:p-6 rounded-[2rem] shadow-[0_4px_15px_rgba(0,0,0,0.02)] border transition-all duration-500 ${
-                (quantities[item.id] || 0) > 0 ? 'border-slate-300 ring-4 ring-slate-100/50' : 'border-slate-100 hover:border-slate-200'
-              } flex items-center justify-between group`}
-            >
-              <div className="flex-1 pr-4">
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base mb-1 leading-tight uppercase tracking-tight group-hover:text-black transition-colors">{item.name}</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400 text-xs sm:text-sm font-bold">R$ {item.price.toFixed(2)}</span>
-                  {(quantities[item.id] || 0) > 0 && <span className="w-1 h-1 bg-slate-300 rounded-full" />}
-                  {(quantities[item.id] || 0) > 0 && (
-                    <span className="text-[10px] font-black text-slate-900 uppercase">Total: R$ {(quantities[item.id] * item.price).toFixed(2)}</span>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-                <button 
-                  onClick={() => updateQuantity(item.id, -1)}
-                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
-                    (quantities[item.id] || 0) > 0 ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-slate-50 text-slate-200 pointer-events-none'
-                  }`}
-                >
-                  <Minus size={20} strokeWidth={3} />
-                </button>
-                
-                <span className="w-5 text-center font-bold text-base sm:text-lg tabular-nums">
-                  {quantities[item.id] || 0}
-                </span>
-                
-                <button 
-                  onClick={() => updateQuantity(item.id, 1)}
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-white shadow-xl active:scale-95 active:brightness-90 transition-all"
-                  style={{ backgroundColor: hotel.color }}
-                >
-                  <Plus size={20} strokeWidth={3} />
-                </button>
-              </div>
-            </motion.div>
+              item={item}
+              quantity={quantities[item.id] || 0}
+              onUpdateQuantity={updateQuantity}
+              hotelColor={hotel.color}
+            />
           ))}
           {items.length === 0 && (
              <div className="text-center py-20 opacity-20 italic font-medium tracking-widest text-sm">NENHUM ITEM DISPONÍVEL</div>
@@ -829,9 +899,10 @@ function Launcher({ hotel }: { hotel: Hotel }) {
       <AnimatePresence>
         {total > 0 && (
           <motion.footer 
-            initial={{ y: 150, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 150, opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl px-6 py-5 pb-8 border-t border-slate-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[2.5rem] z-50 transition-all"
           >
             <div className="max-w-4xl mx-auto">
@@ -850,15 +921,15 @@ function Launcher({ hotel }: { hotel: Hotel }) {
               
               <div className="flex gap-3">
                 <button 
-                  onClick={() => { if(confirm('Limpar todos os lançamentos?')) setQuantities({}); }}
-                  className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex-shrink-0"
+                  onClick={() => setQuantities({})}
+                  className="h-[52px] w-[52px] bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-500 rounded-xl flex items-center justify-center transition-all flex-shrink-0 shadow-sm border border-rose-100/50"
                   title="Limpar tudo"
                 >
-                  <Trash2 size={20} />
+                  <Trash2 size={20} strokeWidth={2.5} />
                 </button>
                 <button 
                   onClick={shareToWhatsApp}
-                  className="flex-1 bg-[#22C55E] text-white py-3.5 rounded-xl font-bold text-base shadow-lg shadow-green-100 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                  className="flex-1 bg-[#22C55E] text-white py-3.5 rounded-xl font-bold text-base shadow-lg shadow-green-100 hover:bg-[#1ebd53] flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
                 >
                   <Send size={18} />
                   Enviar Consumo
@@ -875,11 +946,13 @@ function Launcher({ hotel }: { hotel: Hotel }) {
            <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
               <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 onClick={() => setShowSummary(false)}
                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
               />
               <motion.div 
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 className="relative bg-white w-full max-w-4xl rounded-t-[2.5rem] sm:rounded-4xl p-10 md:p-12 shadow-2xl"
               >
                  <div className="mb-6 flex justify-end items-start text-xs font-black uppercase tracking-widest text-slate-400">
