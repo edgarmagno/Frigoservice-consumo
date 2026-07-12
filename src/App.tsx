@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
   signOut, 
   User as FirebaseUser 
 } from 'firebase/auth';
@@ -217,6 +218,7 @@ function AdminDashboard() {
   // Form states
   const [hotelForm, setHotelForm] = useState({ name: '', loginEmail: '', color: '#004a99', cloneSourceId: '' });
   const [itemForm, setItemForm] = useState({ name: '', price: '' });
+  const [hotelError, setHotelError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -250,31 +252,52 @@ function AdminDashboard() {
   const openAddHotel = () => {
     setEditingHotel(null);
     setHotelForm({ name: '', loginEmail: '', color: '#004a99', cloneSourceId: '' });
+    setHotelError(null);
     setIsHotelModalOpen(true);
   };
 
   const openEditHotel = (hotel: Hotel) => {
     setEditingHotel(hotel);
     setHotelForm({ name: hotel.name, loginEmail: hotel.loginEmail, color: hotel.color, cloneSourceId: '' });
+    setHotelError(null);
     setIsHotelModalOpen(true);
   };
 
   const handleHotelSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setHotelError(null);
     try {
       const { cloneSourceId, ...hotelData } = hotelForm;
+      const targetEmail = hotelData.loginEmail.toLowerCase().trim();
+
+      if (!targetEmail) {
+        setHotelError("ID de Acesso é obrigatório.");
+        return;
+      }
+
+      // Check if duplicate login exists
+      const isDuplicate = hotels.some(h => 
+        (!editingHotel || h.id !== editingHotel.id) && 
+        h.loginEmail.toLowerCase().trim() === targetEmail
+      );
+
+      if (isDuplicate) {
+        setHotelError("Já existe uma unidade cadastrada com este ID de Acesso.");
+        return;
+      }
+
       let targetHotelId = '';
 
       if (editingHotel) {
         targetHotelId = editingHotel.id;
         await updateDoc(doc(db, 'hotels', targetHotelId), {
           ...hotelData,
-          loginEmail: hotelData.loginEmail.toLowerCase()
+          loginEmail: targetEmail
         });
       } else {
         const docRef = await addDoc(collection(db, 'hotels'), {
           ...hotelData,
-          loginEmail: hotelData.loginEmail.toLowerCase()
+          loginEmail: targetEmail
         });
         targetHotelId = docRef.id;
       }
@@ -576,6 +599,12 @@ function AdminDashboard() {
                     className="w-full p-5 bg-slate-50 focus:bg-white border-2 border-transparent focus:border-slate-900 rounded-3xl outline-none font-bold placeholder:opacity-30 text-base"
                     placeholder="ex: hotel01"
                   />
+                  <p className="text-[11px] text-slate-400 font-semibold ml-2">A senha padrão para esta unidade será <strong className="text-slate-900 font-bold">123456</strong></p>
+                  {hotelError && (
+                    <p className="text-xs text-red-500 font-semibold ml-2 bg-red-50 p-3 rounded-2xl border border-red-100">
+                      {hotelError}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Cor da Interface</label>
@@ -1063,7 +1092,24 @@ export default function App() {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (e: unknown) {
       const error = e as { code?: string };
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        try {
+          // If user doesn't exist, register them on-demand with the password they provided (usually default '123456')
+          await createUserWithEmailAndPassword(auth, email, pass);
+          return;
+        } catch (createErr: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+          if (createErr.code === 'auth/email-already-in-use') {
+            setError('Acesso negado. Verifique o ID e a Senha.');
+          } else if (createErr.code === 'auth/weak-password') {
+            setError('A senha deve conter pelo menos 6 caracteres (o padrão é 123456).');
+          } else {
+            setError('Acesso negado. Verifique o ID e a Senha.');
+          }
+          return;
+        }
+      }
+      
+      if (error.code === 'auth/wrong-password') {
         setError('Acesso negado. Verifique o ID e a Senha.');
       } else {
         setError('Ocorreu um erro ao tentar acessar. Verifique sua conexão.');
