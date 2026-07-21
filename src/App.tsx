@@ -20,7 +20,7 @@ import {
   ArrowLeft,
   GripVertical,
 } from 'lucide-react';
-import { motion, AnimatePresence, Reorder } from 'motion/react';
+import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -202,6 +202,66 @@ function Login({ onLogin }: { onLogin: (id: string, pass: string) => void }) {
         </form>
       </motion.div>
     </div>
+  );
+}
+
+interface ItemRowProps {
+  key?: string | number;
+  item: FrigobarItem;
+  onEdit: (item: FrigobarItem) => void;
+  onDelete: (id: string) => void | Promise<void>;
+  onDragEnd: () => void | Promise<void>;
+}
+
+function ItemRow({ item, onEdit, onDelete, onDragEnd }: ItemRowProps) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item 
+      value={item}
+      dragListener={false}
+      dragControls={dragControls}
+      onDragEnd={onDragEnd}
+      className="bg-white group p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-transparent hover:border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.03)] transition-all flex items-center justify-between select-none gap-3 sm:gap-4"
+    >
+      <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+        {/* Drag & Drop Handle visual indicator */}
+        <div 
+          className="text-slate-300 group-hover:text-slate-500 p-2 flex items-center justify-center transition-colors shrink-0 cursor-grab active:cursor-grabbing touch-none"
+          onPointerDown={(e) => dragControls.start(e)}
+        >
+          <GripVertical size={18} className="sm:w-5 sm:h-5" />
+        </div>
+
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-slate-900 transition-colors shrink-0">
+          <PackagePlus size={18} className="sm:w-5 sm:h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-display font-black text-slate-900 text-sm sm:text-lg uppercase tracking-tight leading-tight mb-1 break-words">{item.name}</p>
+          <p className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Preço Unitário: R$ {item.price.toFixed(2)}</p>
+        </div>
+      </div>
+      <div className="flex gap-1 sm:gap-2 shrink-0">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(item);
+          }}
+          className="p-2 sm:p-4 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl sm:rounded-2xl transition-all"
+        >
+          <Edit size={18} className="sm:w-5 sm:h-5" />
+        </button>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(item.id);
+          }}
+          className="p-2 sm:p-4 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl sm:rounded-2xl transition-all"
+        >
+          <Trash2 size={18} className="sm:w-5 sm:h-5" />
+        </button>
+      </div>
+    </Reorder.Item>
   );
 }
 
@@ -566,47 +626,13 @@ function AdminDashboard() {
                     className="grid grid-cols-1 gap-4"
                   >
                     {items.map((item) => (
-                      <Reorder.Item 
-                        key={item.id} 
-                        value={item}
+                      <ItemRow
+                        key={item.id}
+                        item={item}
+                        onEdit={openEditItem}
+                        onDelete={deleteItem}
                         onDragEnd={() => saveItemsOrder(items)}
-                        className="bg-white group p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-transparent hover:border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.03)] transition-all flex items-center justify-between cursor-grab active:cursor-grabbing select-none gap-3 sm:gap-4"
-                      >
-                        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-                          {/* Drag & Drop Handle visual indicator */}
-                          <div className="text-slate-300 group-hover:text-slate-500 p-1 flex items-center justify-center transition-colors shrink-0">
-                            <GripVertical size={18} className="sm:w-5 sm:h-5" />
-                          </div>
-
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-slate-900 transition-colors shrink-0">
-                            <PackagePlus size={18} className="sm:w-5 sm:h-5" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-display font-black text-slate-900 text-sm sm:text-lg uppercase tracking-tight leading-tight mb-1 break-words">{item.name}</p>
-                            <p className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Preço Unitário: R$ {item.price.toFixed(2)}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-1 sm:gap-2 shrink-0">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditItem(item);
-                            }}
-                            className="p-2 sm:p-4 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl sm:rounded-2xl transition-all"
-                          >
-                            <Edit size={18} className="sm:w-5 sm:h-5" />
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteItem(item.id);
-                            }}
-                            className="p-2 sm:p-4 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl sm:rounded-2xl transition-all"
-                          >
-                            <Trash2 size={18} className="sm:w-5 sm:h-5" />
-                          </button>
-                        </div>
-                      </Reorder.Item>
+                      />
                     ))}
                   </Reorder.Group>
                 )}
