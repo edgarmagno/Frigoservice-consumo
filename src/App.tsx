@@ -18,8 +18,9 @@ import {
   ChevronRight,
   Edit,
   ArrowLeft,
+  GripVertical,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, Reorder } from 'motion/react';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -36,7 +37,8 @@ import {
   query, 
   where,
   addDoc,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -46,6 +48,7 @@ interface FrigobarItem {
   id: string;
   name: string;
   price: number;
+  order?: number;
 }
 
 interface Hotel {
@@ -239,7 +242,12 @@ function AdminDashboard() {
       collection(db, 'hotels', selectedHotelId, 'items'), 
       (snap) => {
         const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FrigobarItem));
-        setItems(data.sort((a, b) => a.name.localeCompare(b.name)));
+        setItems(data.sort((a, b) => {
+          const orderA = a.order ?? 0;
+          const orderB = b.order ?? 0;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.name.localeCompare(b.name);
+        }));
       },
       (err) => handleFirestoreError(err, 'list', `hotels/${selectedHotelId}/items`)
     );
@@ -305,9 +313,14 @@ function AdminDashboard() {
       // If a clone source is selected, copy all of its items
       if (cloneSourceId) {
         const sourceItemsSnap = await getDocs(collection(db, 'hotels', cloneSourceId, 'items'));
-        const promises = sourceItemsSnap.docs.map(itemDoc => 
-          addDoc(collection(db, 'hotels', targetHotelId, 'items'), itemDoc.data())
-        );
+        const promises = sourceItemsSnap.docs.map(itemDoc => {
+          const itemData = itemDoc.data();
+          return addDoc(collection(db, 'hotels', targetHotelId, 'items'), {
+            name: itemData.name || '',
+            price: itemData.price || 0,
+            order: itemData.order !== undefined ? itemData.order : 0
+          });
+        });
         await Promise.all(promises);
       }
 
@@ -352,7 +365,8 @@ function AdminDashboard() {
       } else {
         await addDoc(collection(db, 'hotels', selectedHotelId, 'items'), {
           name: itemForm.name,
-          price: isNaN(price) ? 0 : price
+          price: isNaN(price) ? 0 : price,
+          order: items.length
         });
       }
       setIsItemModalOpen(false);
@@ -370,13 +384,32 @@ function AdminDashboard() {
     }
   };
 
+  const saveItemsOrder = async (orderedList: FrigobarItem[]) => {
+    if (!selectedHotelId) return;
+    try {
+      const batch = writeBatch(db);
+      orderedList.forEach((item, idx) => {
+        const itemRef = doc(db, 'hotels', selectedHotelId, 'items', item.id);
+        batch.update(itemRef, { order: idx });
+      });
+      await batch.commit();
+    } catch (err) {
+      handleFirestoreError(err, 'update', `hotels/${selectedHotelId}/items`);
+    }
+  };
+
   const cloneItemsFrom = async (sourceHotelId: string) => {
     if (!selectedHotelId || !confirm('Copiar todos os itens e preços deste hotel? Itens com o mesmo nome serão duplicados.')) return;
     try {
       const sourceItemsSnap = await getDocs(collection(db, 'hotels', sourceHotelId, 'items'));
-      const promises = sourceItemsSnap.docs.map(d => 
-        addDoc(collection(db, 'hotels', selectedHotelId, 'items'), d.data())
-      );
+      const promises = sourceItemsSnap.docs.map(d => {
+        const itemData = d.data();
+        return addDoc(collection(db, 'hotels', selectedHotelId, 'items'), {
+          name: itemData.name || '',
+          price: itemData.price || 0,
+          order: itemData.order !== undefined ? itemData.order : 0
+        });
+      });
       await Promise.all(promises);
       setIsCloneModalOpen(false);
     } catch (err) {
@@ -520,45 +553,63 @@ function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Modern Card List */}
-                <div className="grid grid-cols-1 gap-4">
-                  {items.map(item => (
-                    <motion.div 
-                      key={item.id} 
-                      className="bg-white group p-6 rounded-[2rem] border border-transparent hover:border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.03)] transition-all flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-slate-900 transition-colors">
-                          <PackagePlus size={20} />
+                {/* Modern Card List with Drag & Drop */}
+                {items.length === 0 ? (
+                  <div className="bg-white/50 rounded-4xl border-2 border-dashed border-slate-200 p-20 text-center">
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhum item cadastrado</p>
+                  </div>
+                ) : (
+                  <Reorder.Group 
+                    axis="y" 
+                    values={items} 
+                    onReorder={setItems}
+                    className="grid grid-cols-1 gap-4"
+                  >
+                    {items.map((item) => (
+                      <Reorder.Item 
+                        key={item.id} 
+                        value={item}
+                        onDragEnd={() => saveItemsOrder(items)}
+                        className="bg-white group p-6 rounded-[2rem] border border-transparent hover:border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.03)] transition-all flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
+                      >
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          {/* Drag & Drop Handle visual indicator */}
+                          <div className="text-slate-300 group-hover:text-slate-500 p-1 flex items-center justify-center transition-colors shrink-0">
+                            <GripVertical size={20} />
+                          </div>
+
+                          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-slate-900 transition-colors shrink-0">
+                            <PackagePlus size={20} />
+                          </div>
+                          <div className="truncate">
+                            <p className="font-display font-black text-slate-900 text-lg uppercase tracking-tight leading-none mb-1 truncate">{item.name}</p>
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Preço Unitário: R$ {item.price.toFixed(2)}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-display font-black text-slate-900 text-lg uppercase tracking-tight leading-none mb-1">{item.name}</p>
-                          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Preço Unitário: R$ {item.price.toFixed(2)}</p>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditItem(item);
+                            }}
+                            className="p-4 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all"
+                          >
+                            <Edit size={20} />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteItem(item.id);
+                            }}
+                            className="p-4 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
+                          >
+                            <Trash2 size={20} />
+                          </button>
                         </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => openEditItem(item)}
-                          className="p-4 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-2xl transition-all"
-                        >
-                          <Edit size={20} />
-                        </button>
-                        <button 
-                          onClick={() => deleteItem(item.id)}
-                          className="p-4 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
-                        >
-                          <Trash2 size={20} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                  
-                  {items.length === 0 && (
-                    <div className="bg-white/50 rounded-4xl border-2 border-dashed border-slate-200 p-20 text-center">
-                      <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhum item cadastrado</p>
-                    </div>
-                  )}
-                </div>
+                      </Reorder.Item>
+                    ))}
+                  </Reorder.Group>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -813,7 +864,12 @@ function Launcher({ hotel }: { hotel: Hotel }) {
       q, 
       (snap) => {
         const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as FrigobarItem));
-        setItems(data.sort((a, b) => a.name.localeCompare(b.name)));
+        setItems(data.sort((a, b) => {
+          const orderA = a.order ?? 0;
+          const orderB = b.order ?? 0;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.name.localeCompare(b.name);
+        }));
         setLoading(false);
       },
       (err) => handleFirestoreError(err, 'list', `hotels/${hotel.id}/items`)
